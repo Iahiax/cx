@@ -20,11 +20,11 @@ from api_handler import login, get_market_data, execute_order
 from features import add_features
 from environments import ProTradingEnv
 from strategies import StrategyEngine
-from config import LOG_FILE, LEVERAGE, EPIC_DXY, EPIC_GOLD
+from config import LOG_FILE, LEVERAGE
 
 logging.basicConfig(filename=LOG_FILE, level=logging.INFO, format='%(asctime)s - %(message)s')
 
-# تشكيل المجلس الأسطوري المكون من 4 عقول عصبية متقدمة
+# تشكيل المجلس الأسطوري المكون من 4 عقول عصبية متقدمة لزوج EUR/USD
 COUNCIL_MEMBERS = {
     "TransformerForecaster": 0.35,  # التنبؤ العميق
     "MultiAgentTrendSwarm": 0.30,   # سرب تعلم الآلة
@@ -33,18 +33,16 @@ COUNCIL_MEMBERS = {
 }
 
 def run_ultimate_ai_council():
-    print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 👑 بدء تشغيل كيان الذكاء الاصطناعي الأسطوري (Demo - Leverage {LEVERAGE}:1)")
+    print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 👑 بدء تشغيل الكيان الأسطوري لزوج EUR/USD (Demo - Leverage {LEVERAGE}:1)")
     
     cst, xst = login()
     if not cst: return
 
-    print("📥 سحب البيانات الكلية والتقاطعية (EUR/USD, DXY, Gold)...")
+    print("📥 سحب بيانات EUR/USD اللحظية...")
     raw_df = get_market_data(cst, xst)
-    df_dxy = get_market_data(cst, xst, target_epic=EPIC_DXY)
-    
     if raw_df is None: return
 
-    # 1. درع تخدير الأخبار الكاذبة (Noise Spike Shield عبر قياس سرعة السعر العالية)
+    # 1. درع تخدير الأخبار الكاذبة (Noise Spike Shield)
     last_velocity = raw_df['close'].diff().abs().iloc[-1]
     current_atr = raw_df['high'].iloc[-1] - raw_df['low'].iloc[-1]
     if current_atr == 0: current_atr = 0.0005
@@ -53,15 +51,7 @@ def run_ultimate_ai_council():
         print(f"🚨 [Noise Spike Shield]: رصد حركة سعرية جنونية مفاجئة ({last_velocity:.4f}). تم تفعيل درع التخدير وإلغاء التداول تفادياً للأخبار المزيفة!")
         return
 
-    # 2. فحص الارتباط التقاطعي مع مؤشر الدولار (Cross-Asset Macro Correlation)
-    if df_dxy is not None and not df_dxy.empty:
-        dxy_change = df_dxy['close'].iloc[-1] - df_dxy['close'].iloc[-2]
-        eur_change = raw_df['close'].iloc[-1] - raw_df['close'].iloc[-2]
-        # إذا كان مؤشر الدولار واليورو يتحركان في نفس الاتجاه بشكل شاذ، فهذا تضارب تقاطعي
-        if dxy_change > 0 and eur_change > 0:
-            print("⚠️ [Cross-Asset Filter]: تضارب بين حركة مؤشر الدولار وزوج اليورو. سيتم خفض الحذر أو تقييد الصفقة.")
-
-    # 3. صيد فخاخ الحيتان (Stop-Hunt / Trap Detector)
+    # 2. صيد فخاخ الحيتان (Stop-Hunt / Trap Detector)
     last_volume = raw_df['volume'].iloc[-1]
     avg_volume = raw_df['volume'].rolling(20).mean().iloc[-1]
     is_price_breaking_low = raw_df['close'].iloc[-1] < raw_df['low'].rolling(5).min().iloc[-2]
@@ -73,7 +63,7 @@ def run_ultimate_ai_council():
         stop_dist = current_atr * 1.2
         profit_dist = current_atr * 2.5
         if execute_order(cst, xst, direction, trade_size, stop_distance=stop_dist, profit_distance=profit_dist):
-            logging.info("Trap Detector executed BUY trade.")
+            logging.info("Trap Detector executed BUY trade on EUR/USD.")
         return
 
     df = add_features(raw_df)
@@ -99,7 +89,7 @@ def run_ultimate_ai_council():
         print(f"   🤖 {member:<25} | الصوت: {dir_text} | القوة: {weight*100}%")
 
     print("-" * 50)
-    print(f"🧠 الإجماع العصبي النهائي للكيان (Fusion Score): {weighted_consensus:+.3f}")
+    print(f"🧠 الإجماع العصبي النهائي لزوج EUR/USD (Fusion Score): {weighted_consensus:+.3f}")
     print("-" * 50)
     
     CONFIDENCE_THRESHOLD = 0.18 
@@ -109,20 +99,20 @@ def run_ultimate_ai_council():
     
     if weighted_consensus >= CONFIDENCE_THRESHOLD:
         direction = "BUY"
-        msg = f"🚀 [LEGENDARY BUY] تنفيذ صفقة شراء - حجم العقد: {trade_size} - رافعة: {LEVERAGE}:1 - إجماع: {weighted_consensus:.2f}"
+        msg = f"🚀 [EUR/USD BUY] تنفيذ صفقة شراء - حجم العقد: {trade_size} - رافعة: {LEVERAGE}:1 - إجماع: {weighted_consensus:.2f}"
         print(msg)
         if execute_order(cst, xst, direction, trade_size, stop_distance=stop_dist, profit_distance=profit_dist):
             logging.info(msg)
             
     elif weighted_consensus <= -CONFIDENCE_THRESHOLD:
         direction = "SELL"
-        msg = f"📉 [LEGENDARY SELL] تنفيذ صفقة بيع - حجم العقد: {trade_size} - رافعة: {LEVERAGE}:1 - إجماع: {weighted_consensus:.2f}"
+        msg = f"📉 [EUR/USD SELL] تنفيذ صفقة بيع - حجم العقد: {trade_size} - رافعة: {LEVERAGE}:1 - إجماع: {weighted_consensus:.2f}"
         print(msg)
         if execute_order(cst, xst, direction, trade_size, stop_distance=stop_dist, profit_distance=profit_dist):
             logging.info(msg)
             
     else:
-        msg = f"⚖️ قرار (CASH) - السوق في منطقة غائمة. البقاء خارج السوق. الإجماع: {weighted_consensus:.2f}"
+        msg = f"⚖️ قرار (CASH) - السوق عرضي لزوج EUR/USD. البقاء خارج السوق. الإجماع: {weighted_consensus:.2f}"
         print(msg)
         logging.info(msg)
 

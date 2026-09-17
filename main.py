@@ -15,18 +15,26 @@ tf.config.threading.set_intra_op_parallelism_threads(1)
 import logging
 import numpy as np
 from datetime import datetime
+
 from api_handler import login, get_market_data, execute_order
 from features import add_features
 from environments import ProTradingEnv
 from strategies import StrategyEngine
-from market_watcher import MarketWatcher
-from regime_engine import RegimeEngine
-from meta_model import MetaModel
-from journal import TradeJournal
 from config import LOG_FILE, LEVERAGE
+
+# استدعاء الأنظمة الـ 12 الجديدة
+from market_watcher_360 import MarketWatcher360
+from regime_engine import RegimeEngine
+from online_learner import OnlineLearner
+from signal_evaluator import SignalEvaluator
+from auto_maintenance import AutoMaintenance
+from journal import TradeJournal
 
 logging.basicConfig(filename=LOG_FILE, level=logging.INFO, format='%(asctime)s - %(message)s')
 journal = TradeJournal()
+maintenance = AutoMaintenance()
+learner = OnlineLearner()
+evaluator = SignalEvaluator()
 
 COUNCIL_MEMBERS = {
     "TransformerForecaster": 0.35,  
@@ -35,14 +43,12 @@ COUNCIL_MEMBERS = {
     "VolatilityProphet": 0.20       
 }
 
-def run_ultimate_ai_council():
-    print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 👑 [الكيان السيادي] بدء دورة التحليل الشاملة (Demo - Leverage {LEVERAGE}:1)")
+def run_gen5_sovereign_bot():
+    print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 👑 [Gen-5 Sovereign] بدء دورة التشغيل الذاتي الخارقة (Demo - {LEVERAGE}:1)")
     
-    # التحقق من إغلاق السوق (نهاية الأسبوع أو الإغلاق اليومي)
-    now = datetime.now()
-    if now.weekday() == 4 and now.hour >= 22: # الجمعة متأخر
-        print("🛡️ نظام إيقاف الحماية: اقتراب إغلاق السوق الأسبوعي. منع فتح صفقات جديدة.")
-        return
+    # 1. صيانة أسبوعية تلقائية إذا لزم الأمر
+    maintenance.check_auto_rebuild()
+    maintenance.run_daily_self_analysis()
 
     cst, xst = login()
     if not cst: return
@@ -50,66 +56,64 @@ def run_ultimate_ai_council():
     raw_df = get_market_data(cst, xst)
     if raw_df is None or raw_df.empty: return
 
-    # 1. Market Watcher & Regime Detection
-    watcher = MarketWatcher(raw_df)
-    structure = watcher.detect_market_structure()
-    
-    df = add_features(raw_df)
-    regime_eng = RegimeEngine(df)
-    market_regime = regime_eng.detect_regime()
-    
-    if regime_eng.check_news_blackout():
-        print("🚨 [News Blackout]: توقف تام بسبب صدور بيانات اقتصادية خطرة.")
+    # 2. فحص الانحرافات والشموع الشاذة (Market Anomaly Detector)
+    df_temp = add_features(raw_df)
+    is_anomaly, anomaly_msg = learner.detect_anomaly(df_temp)
+    if is_anomaly:
+        print(anomaly_msg)
+        journal.log_trade("NONE", 0, 0, "Anomaly", anomaly_msg, "ABORTED")
         return
 
-    print(f"📊 حالة السوق الحالية (Regime): {market_regime} | بنية السيولة: {structure}")
+    # 3. Market Watcher 360 & Regime Detection
+    watcher360 = MarketWatcher360(raw_df)
+    smc_data = watcher360.scan_smart_money_zones()
+    
+    regime_eng = RegimeEngine(df_temp)
+    market_regime = regime_eng.detect_regime()
+    
+    print(f"📊 النظام السوقي: {market_regime} | تحليل الأموال الذكية (SMC): {smc_data}")
 
-    env = ProTradingEnv(df)
+    env = ProTradingEnv(df_temp)
     engines = {}
     for member in COUNCIL_MEMBERS.keys():
         engine = StrategyEngine(member)
-        engine.train(df=df, env=env)
+        engine.train(df=df_temp, env=env)
         engines[member] = engine
         
     latest_features = env.features[-1].astype(np.float32)
     weighted_consensus = 0.0
-    
     for member, weight in COUNCIL_MEMBERS.items():
         raw_vote = engines[member].predict(latest_features)
         weighted_consensus += (raw_vote * weight)
 
-    print(f"🧠 الإجماع العصبي الأولي: {weighted_consensus:+.3f}")
+    # 4. تقييم جودة الإشارة (Signal Quality Scoring)
+    quality_score, score_msg = evaluator.evaluate_signal_quality(weighted_consensus, market_regime, is_anomaly, smc_data)
+    print(f"🎯 {score_msg}")
 
-    # 2. Meta-Model Evaluation
-    meta = MetaModel()
-    approved, size_multiplier, meta_msg = meta.evaluate_signal(weighted_consensus, market_regime, structure)
-    print(f"🛡️ قرار Meta-Model: {meta_msg}")
-
-    if not approved:
-        journal.log_trade("NONE", 0, weighted_consensus, market_regime, meta_msg, "REJECTED")
+    if quality_score < 40.0:
+        print("⚠️ جودة الإشارة منخفضة جداً. تم إلغاء الصفقة لحماية رأس المال.")
         return
 
-    current_atr = df['ATR_14'].iloc[-1]
+    current_atr = df_temp['ATR_14'].iloc[-1]
     stop_dist = current_atr * 1.5
     profit_dist = current_atr * 2.5
     
     base_size = int(abs(weighted_consensus) * 20000)
-    trade_size = max(1000, int(base_size * size_multiplier))
+    trade_size = max(1000, base_size)
 
-    CONFIDENCE_THRESHOLD = 0.18
-    if weighted_consensus >= CONFIDENCE_THRESHOLD:
+    if weighted_consensus >= 0.18:
         direction = "BUY"
-        print(f"🚀 [BUY] تنفيذ صفقة شراء متكيفة - الحجم: {trade_size}")
+        print(f"🚀 [GEN-5 BUY] تنفيذ صفقة شراء بذكاء اصطناعي ذاتي التعلّم - الحجم: {trade_size}")
         if execute_order(cst, xst, direction, trade_size, stop_distance=stop_dist, profit_distance=profit_dist):
-            journal.log_trade(direction, trade_size, weighted_consensus, market_regime, meta_msg, "EXECUTED")
+            journal.log_trade(direction, trade_size, weighted_consensus, market_regime, f"Score: {quality_score}", "EXECUTED")
             
-    elif weighted_consensus <= -CONFIDENCE_THRESHOLD:
+    elif weighted_consensus <= -0.18:
         direction = "SELL"
-        print(f"📉 [SELL] تنفيذ صفقة بيع متكيفة - الحجم: {trade_size}")
+        print(f"📉 [GEN-5 SELL] تنفيذ صفقة بيع بذكاء اصطناعي ذاتي التعلّم - الحجم: {trade_size}")
         if execute_order(cst, xst, direction, trade_size, stop_distance=stop_dist, profit_distance=profit_dist):
-            journal.log_trade(direction, trade_size, weighted_consensus, market_regime, meta_msg, "EXECUTED")
+            journal.log_trade(direction, trade_size, weighted_consensus, market_regime, f"Score: {quality_score}", "EXECUTED")
     else:
-        print("⚖️ قرار (CASH): بقاء خارج السوق لعدم وجود وضوح كافٍ.")
+        print("⚖️ قرار (CASH): الاستقرار خارج السوق.")
 
 if __name__ == "__main__":
-    run_ultimate_ai_council()
+    run_gen5_sovereign_bot()

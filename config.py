@@ -8,7 +8,7 @@ DEMO = True
 # إعدادات السيرفر والسوق
 SERVER = "https://demo-api-capital.backend-capital.com" if DEMO else "https://api-capital.backend-capital.com"
 EPIC = "CS.D.EURUSD.MINI.IP"
-MAX_DATA_POINTS = 2000
+MAX_DATA_POINTS = 1000
 
 # 🔄 تم التعديل هنا: تغيير الفريم الزمني إلى الدقيقة الواحدة
 RESOLUTION = "MINUTE" 

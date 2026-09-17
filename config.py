@@ -10,7 +10,7 @@ SERVER = "https://demo-api-capital.backend-capital.com" if DEMO else "https://ap
 EPIC = "EURUSD"
 
 
-MAX_DATA_POINTS = 1000
+MAX_DATA_POINTS = 2000
 
 # 🔄 تم التعديل هنا: تغيير الفريم الزمني إلى الدقيقة الواحدة
 RESOLUTION = "MINUTE" 

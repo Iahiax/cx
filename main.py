@@ -44,11 +44,10 @@ def run_backtest_simulation(df, engines):
     wins = 0
     losses = 0
     
-    # محاكاة على آخر 100 شمعة تاريخية
     test_df = df.tail(100)
     for i in range(len(test_df) - 1):
         row_features = test_df.drop(columns=['open', 'high', 'low', 'close', 'volume', 'Target']).iloc[i].values.astype(np.float32)
-        actual_target = test_df['Target'].iloc[i] # الاتجاه الحقيقي للشمعة التالية
+        actual_target = test_df['Target'].iloc[i]
         
         consensus = 0.0
         for member, weight in COUNCIL_MEMBERS.items():
@@ -63,13 +62,11 @@ def run_backtest_simulation(df, engines):
             
     total_trades = wins + losses
     win_rate = (wins / total_trades) * 100 if total_trades > 0 else 0
-    print(f"📈 [Backtest Results]: نسبة النجاح التاريخية = {win_rate:.2f}% (صحيحة: {wins}, خاطئة: {losses})")
-    
-    # السماح بالتداول إذا كانت نسبة النجاح أعلى من 50%
+    print(f"📈 [Backtest Results]: نسبة النجاح التاريخية = {win_rate:.2f}%")
     return win_rate >= 50.0
 
 def run_gen5_sovereign_bot():
-    print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 👑 [Gen-5 Sovereign] بدء دورة التدريب، الباكتيست والتداول الآلي")
+    print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 👑 [Gen-5 Sovereign] بدء دورة التشغيل مع درع Finnhub والأخبار الحية")
     
     cst, xst = login()
     if not cst: return
@@ -78,32 +75,34 @@ def run_gen5_sovereign_bot():
     if raw_df is None or raw_df.empty: return
 
     df_temp = add_features(raw_df)
+    
+    # 1. التحقق من درع الأخبار الحية عبر Finnhub قبل أي شيء
+    regime_eng = RegimeEngine(df_temp)
+    if regime_eng.check_news_blackout():
+        print("🛡️ [News Blackout Active]: تم تعليق التداول مؤقتاً بسبب صدور أخبار اقتصادية كبرى من Finnhub.")
+        journal.log_trade("NONE", 0, 0, "News Shock", "Finnhub News Blackout", "ABORTED")
+        return
+
     env = ProTradingEnv(df_temp)
     
-    # 1. تدريب النماذج ذاتياً
-    print("⚡ [1/3] بدء التدريب الذاتي المستمر لعقول المجلس...")
+    # 2. التدريب الذاتي المستمر
+    print("⚡ [1/3] التدريب الذاتي المستمر لعقول المجلس...")
     engines = {}
     for member in COUNCIL_MEMBERS.keys():
         engine = StrategyEngine(member)
         engine.train(df=df_temp, env=env)
         engines[member] = engine
-    print("✅ تم الانتهاء من التدريب الذاتي بنجاح.")
 
-    # 2. تشغيل الباكتيست (Backtest)
-    print("🧪 [2/3] تشغيل نظام الاختبار الخلفي (Backtest)...")
-    passed_backtest = run_backtest_simulation(df_temp, engines)
-    
-    if not passed_backtest:
-        print("❌ [Backtest Failed]: نسبة النجاح التاريخية أقل من الحد المقبول. تم تعليق التداول الحي لحماية رأس المال.")
+    # 3. تشغيل الباكتيست
+    print("🧪 [2/3] اختبار كفاءة الاستراتيجية (Backtest)...")
+    if not run_backtest_simulation(df_temp, engines):
+        print("❌ [Backtest Failed]: نسبة النجاح منخفضة. تم إلغاء التنفيذ لحماية الحساب.")
         return
-    print("✅ [Backtest Passed]: اجتازت الاستراتيجية الاختبار الخلفي بنجاح تام!")
 
-    # 3. اتخاذ القرار والتداول الحي على حساب الـ Demo
-    print("🚀 [3/3] الانتقال للتداول الحي على حساب الديمو (Demo Execution)...")
+    # 4. التنفيذ الحي على حساب الـ Demo
+    print("🚀 [3/3] تنفيذ الصفقة الحية على حساب الديمو (Demo Execution)...")
     watcher360 = MarketWatcher360(raw_df)
     smc_data = watcher360.scan_smart_money_zones()
-    
-    regime_eng = RegimeEngine(df_temp)
     market_regime = regime_eng.detect_regime()
     
     latest_features = env.features[-1].astype(np.float32)
@@ -121,15 +120,15 @@ def run_gen5_sovereign_bot():
         direction = "BUY"
         print(f"🚀 [DEMO BUY] تنفيذ صفقة شراء - الحجم: {trade_size} - رافعة: {LEVERAGE}:1")
         if execute_order(cst, xst, direction, trade_size, stop_distance=stop_dist, profit_distance=profit_dist):
-            journal.log_trade(direction, trade_size, weighted_consensus, market_regime, "Backtest Passed", "EXECUTED")
+            journal.log_trade(direction, trade_size, weighted_consensus, market_regime, "Finnhub Clear + Backtest Passed", "EXECUTED")
             
     elif weighted_consensus <= -0.18:
         direction = "SELL"
         print(f"📉 [DEMO SELL] تنفيذ صفقة بيع - الحجم: {trade_size} - رافعة: {LEVERAGE}:1")
         if execute_order(cst, xst, direction, trade_size, stop_distance=stop_dist, profit_distance=profit_dist):
-            journal.log_trade(direction, trade_size, weighted_consensus, market_regime, "Backtest Passed", "EXECUTED")
+            journal.log_trade(direction, trade_size, weighted_consensus, market_regime, "Finnhub Clear + Backtest Passed", "EXECUTED")
     else:
-        print("⚖️ قرار (CASH): الاستقرار خارج السوق لعدم وجود إتجاه واضح.")
+        print("⚖️ قرار (CASH): البقاء خارج السوق.")
 
 if __name__ == "__main__":
     run_gen5_sovereign_bot()

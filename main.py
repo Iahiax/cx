@@ -1,15 +1,28 @@
 # main.py
 import os
 
-# 🟢 إجبار النظام على استخدام CPU ومنع البحث عن GPU لتفادي انهيار PyTorch/TF
+# 1. إجبار النظام على استخدام CPU ومنع البحث عن GPU
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-# 🟢 منع تصادم خيوط المعالج (Threads) بين TensorFlow و PyTorch لتفادي Segmentation fault
+# 2. الحل السحري لمنع تعارض مكتبات الحساب بين TensorFlow و PyTorch
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+
+# 3. منع تصادم خيوط المعالج (Threads) على مستوى نظام التشغيل
 os.environ['OMP_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
+# 4. تقييد استهلاك PyTorch لمسارات المعالج
+import torch
+torch.set_num_threads(1)
+
+# 5. تقييد استهلاك TensorFlow لمسارات المعالج
+import tensorflow as tf
+tf.config.threading.set_inter_op_parallelism_threads(1)
+tf.config.threading.set_intra_op_parallelism_threads(1)
+
 import logging
+import numpy as np
 from datetime import datetime
 from api_handler import login, get_market_data, execute_order
 from features import add_features
@@ -22,9 +35,9 @@ logging.basicConfig(filename=LOG_FILE, level=logging.INFO, format='%(asctime)s -
 
 # تشكيل المجلس الأعلى (الاسم : نسبة قوة التصويت)
 COUNCIL_MEMBERS = {
-    "TransformerForecaster": 0.45,  # قوة 45% (التنبؤ العميق)
-    "MultiAgentTrendSwarm": 0.35,   # قوة 35% (السرب لإدارة المخاطرة)
-    "OnlineSVMTrend": 0.20,         # قوة 20% (الكلاسيكي للتأكيد)
+    "TransformerForecaster": 0.45,
+    "MultiAgentTrendSwarm": 0.35, 
+    "OnlineSVMTrend": 0.20,      
 }
 
 def run_ultimate_ai_council():

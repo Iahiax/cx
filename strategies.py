@@ -34,7 +34,7 @@ class StrategyEngine:
         return model
 
     def train_TransformerForecaster(self, df):
-        print(f"🌌 تدريب: {self.strategy_name}...")
+        print(f"🌌 تدريب عقل التنبؤ العميق: {self.strategy_name}...")
         X = df.drop(columns=['open', 'high', 'low', 'close', 'volume', 'Target']).values[:-1]
         y = df['Target'].values[:-1]
         X = X.reshape((X.shape[0], 1, X.shape[1])) 
@@ -54,7 +54,7 @@ class StrategyEngine:
         return (prediction * 2) - 1.0 
 
     def train_MultiAgentTrendSwarm(self, df):
-        print(f"🐝 تدريب: {self.strategy_name} (ML Ensemble)...")
+        print(f"🐝 تدريب عقل السرب (ML Ensemble): {self.strategy_name}...")
         X = df.drop(columns=['open', 'high', 'low', 'close', 'volume', 'Target']).values[:-1]
         y = df['Target'].values[:-1]
         
@@ -73,7 +73,7 @@ class StrategyEngine:
         return (vote_rf + vote_gb) / 2.0
 
     def train_OnlineSVMTrend(self, df):
-        print(f"⚙️ تدريب: {self.strategy_name}...")
+        print(f"⚙️ تدريب عقل الخبير الرياضي (SVM): {self.strategy_name}...")
         X = df.drop(columns=['open', 'high', 'low', 'close', 'volume', 'Target']).values[:-1]
         y = df['Target'].values[:-1]
         
@@ -84,6 +84,20 @@ class StrategyEngine:
     def predict_OnlineSVMTrend(self, features):
         pred = self.model.predict(features.reshape(1, -1))[0]
         return 1.0 if pred == 1 else -1.0 
+
+    # عقل نبي التقلبات الرابع (Volatility Prophet)
+    def train_VolatilityProphet(self, df):
+        print(f"🔮 تدريب نبي التقلبات والسيولة العصبية: {self.strategy_name}...")
+        X = df[['ATR_14', 'Volatility_Surface', 'Price_Velocity']].values[:-1]
+        y = df['Target'].values[:-1]
+        self.vol_model = SVC(kernel='poly', degree=3, probability=True)
+        self.vol_model.fit(X, y)
+
+    def predict_VolatilityProphet(self, features):
+        # استخلاص خصائص التقلب المحددة فقط
+        vol_features = np.array([features[3], features[-1], features[-2]]) # ATR, Velocity, Vol_Surface تقريبياً
+        pred = self.vol_model.predict(vol_features.reshape(1, -1))[0]
+        return 1.0 if pred == 1 else -1.0
 
     def train(self, df=None, env=None):
         method_name = f"train_{self.strategy_name}"

@@ -3,10 +3,9 @@ import os
 import numpy as np
 import joblib
 
-# إيقاف رسائل تحذير TensorFlow المزعجة في الـ Terminal
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 import tensorflow as tf
-from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
@@ -16,12 +15,8 @@ class StrategyEngine:
         self.strategy_name = strategy_name
         self.model = None
 
-    # ==========================================
-    # 🧠 Transformer Trend Forecaster (التعلم العميق)
-    # ==========================================
     def build_transformer_model(self, input_shape):
         inputs = Input(shape=input_shape)
-        
         attention_output = MultiHeadAttention(num_heads=4, key_dim=64)(query=inputs, value=inputs)
         attention_output = Dropout(0.2)(attention_output)
         out1 = LayerNormalization(epsilon=1e-6)(inputs + attention_output)
@@ -58,16 +53,11 @@ class StrategyEngine:
         prediction = self.model.predict(X, verbose=0)[0][0]
         return (prediction * 2) - 1.0 
 
-    # ==========================================
-    # 🤖 Multi-Agent Trend Swarm (سرب تعلم الآلة)
-    # ==========================================
     def train_MultiAgentTrendSwarm(self, df):
         print(f"🐝 تدريب: {self.strategy_name} (ML Ensemble)...")
-        # استخدام الخصائص لتدريب السرب بدلاً من بيئة Gym
         X = df.drop(columns=['open', 'high', 'low', 'close', 'volume', 'Target']).values[:-1]
         y = df['Target'].values[:-1]
         
-        # إنشاء وكيلين يعتمدان على التصنيف المتقدم
         self.agent_rf = RandomForestClassifier(n_estimators=100, random_state=42)
         self.agent_gb = GradientBoostingClassifier(n_estimators=100, random_state=42)
         
@@ -78,17 +68,10 @@ class StrategyEngine:
         f = features.reshape(1, -1)
         pred_rf = self.agent_rf.predict(f)[0]
         pred_gb = self.agent_gb.predict(f)[0]
-        
-        # تحويل 0 و 1 إلى -1.0 و 1.0
         vote_rf = 1.0 if pred_rf == 1 else -1.0
         vote_gb = 1.0 if pred_gb == 1 else -1.0
-        
-        # متوسط تصويت السرب
         return (vote_rf + vote_gb) / 2.0
 
-    # ==========================================
-    # 📈 Online SVM Trend (الخبير الرياضي)
-    # ==========================================
     def train_OnlineSVMTrend(self, df):
         print(f"⚙️ تدريب: {self.strategy_name}...")
         X = df.drop(columns=['open', 'high', 'low', 'close', 'volume', 'Target']).values[:-1]
@@ -102,17 +85,10 @@ class StrategyEngine:
         pred = self.model.predict(features.reshape(1, -1))[0]
         return 1.0 if pred == 1 else -1.0 
 
-    # ==========================================
-    # 🧬 محول التشغيل الذكي (Router)
-    # ==========================================
     def train(self, df=None, env=None):
         method_name = f"train_{self.strategy_name}"
         if hasattr(self, method_name):
-            method = getattr(self, method_name)
-            # الآن جميع الاستراتيجيات تعتمد مباشرة على البيانات df لضمان الاستقرار
-            method(df)
-        else:
-            print(f"⚠️ دالة {method_name} مفقودة.")
+            getattr(self, method_name)(df)
 
     def predict(self, features):
         method_name = f"predict_{self.strategy_name}"

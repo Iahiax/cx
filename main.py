@@ -1,4 +1,14 @@
 # main.py
+import os
+
+# 🟢 إجبار النظام على استخدام CPU ومنع البحث عن GPU لتفادي انهيار PyTorch/TF
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+# 🟢 منع تصادم خيوط المعالج (Threads) بين TensorFlow و PyTorch لتفادي Segmentation fault
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+
 import logging
 from datetime import datetime
 from api_handler import login, get_market_data, execute_order

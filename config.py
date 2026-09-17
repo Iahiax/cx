@@ -19,5 +19,5 @@ RESOLUTION = "MINUTE"
 LOG_FILE = "trading_log.txt"
 
 LEVERAGE = 100
-# مفتاح Finnhub للأخبار الحية
+
 ‏FINNHUB_API_KEY = "d96hs19r01qr77dkhss0d96hs19r01qr77dkhssg"

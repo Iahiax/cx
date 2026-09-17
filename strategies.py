@@ -21,7 +21,9 @@ class StrategyEngine:
     # ==========================================
     def build_transformer_model(self, input_shape):
         inputs = Input(shape=input_shape)
-        attention_output = MultiHeadAttention(num_heads=4, key_dim=64)(inputs, inputs)
+        
+        # 🟢 التعديل الجوهري هنا: تحديد أسماء المدخلات صراحة (query, value) لتفادي خطأ Keras
+        attention_output = MultiHeadAttention(num_heads=4, key_dim=64)(query=inputs, value=inputs)
         attention_output = Dropout(0.2)(attention_output)
         out1 = LayerNormalization(epsilon=1e-6)(inputs + attention_output)
         
@@ -43,7 +45,8 @@ class StrategyEngine:
         y = df['Target'].values[:-1]
         X = X.reshape((X.shape[0], 1, X.shape[1])) 
         
-        model_path = "transformer_model.h5"
+        # 🟢 التعديل الثاني: استخدام صيغة .keras الحديثة بدلاً من .h5 القديمة
+        model_path = "transformer_model.keras"
         if os.path.exists(model_path):
             self.model = tf.keras.models.load_model(model_path)
         else:
@@ -88,7 +91,7 @@ class StrategyEngine:
 
     def predict_OnlineSVMTrend(self, features):
         pred = self.model.predict(features.reshape(1, -1))[0]
-        return 1.0 if pred == 1 else -1.0 # لغة موحدة للفريق
+        return 1.0 if pred == 1 else -1.0 
 
     # ==========================================
     # 🧬 محول التشغيل الذكي (Router)

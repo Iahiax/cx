@@ -20,4 +20,5 @@ LOG_FILE = "trading_log.txt"
 
 LEVERAGE = 100
 
-‏FINNHUB_API_KEY = "d96hs19r01qr77dkhss0d96hs19r01qr77dkhssg"
+‏
+FINNHUB_API_KEY = "d96hs19r01qr77dkhss0d96hs19r01qr77dkhssg"

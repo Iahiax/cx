@@ -9,7 +9,6 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.linear_model import SGDClassifier
 
 class StrategyEngine:
     def __init__(self, strategy_name):
@@ -37,19 +36,31 @@ class StrategyEngine:
         return model
 
     def train(self, df=None, env=None):
-        """التدريب الأولي أو التحديث الذاتي المستمر"""
-        X = df.drop(columns=['open', 'high', 'low', 'close', 'volume', 'Target']).values[:-1]
+        """التدريب الذاتي المستمر مع حماية الأبعاد"""
+        feature_cols = [c for c in df.columns if c not in ['open', 'high', 'low', 'close', 'volume', 'Target']]
+        X = df[feature_cols].values[:-1]
         y = df['Target'].values[:-1]
 
         if "Transformer" in self.strategy_name:
-            X_reshaped = X.reshape((X.shape[0], 1, X.shape[1]))
-            if os.path.exists(self.transformer_path):
-                self.model = tf.keras.models.load_model(self.transformer_path)
-                # التدريب الذاتي المستمر بـ Epochs قليلة على البيانات الجديدة
-                self.model.fit(X_reshaped, y, epochs=2, batch_size=32, verbose=0)
+            # التأكد من أن الأبعاد ثلاثية وثابتة للـ Transformer
+            if len(X.shape) == 2:
+                X_reshaped = X.reshape((X.shape[0], 1, X.shape[1]))
             else:
-                self.model = self.build_transformer_model((1, X.shape[2]))
+                X_reshaped = X
+                
+            input_dim = X_reshaped.shape[-1]
+            
+            if os.path.exists(self.transformer_path):
+                try:
+                    self.model = tf.keras.models.load_model(self.transformer_path)
+                    self.model.fit(X_reshaped, y, epochs=2, batch_size=32, verbose=0)
+                except:
+                    self.model = self.build_transformer_model((1, input_dim))
+                    self.model.fit(X_reshaped, y, epochs=10, batch_size=32, verbose=0)
+            else:
+                self.model = self.build_transformer_model((1, input_dim))
                 self.model.fit(X_reshaped, y, epochs=10, batch_size=32, verbose=0)
+                
             self.model.save(self.transformer_path)
 
         elif "Swarm" in self.strategy_name:
@@ -59,12 +70,11 @@ class StrategyEngine:
                 self.agent_rf = RandomForestClassifier(n_estimators=100, random_state=42)
                 self.agent_gb = GradientBoostingClassifier(n_estimators=100, random_state=42)
             
-            # التحديث الذاتي التدريجي
             self.agent_rf.fit(X, y)
             self.agent_gb.fit(X, y)
             joblib.dump((self.agent_rf, self.agent_gb), self.ml_path)
 
-        else: # SVM أو التقلبات
+        else:
             if os.path.exists(self.ml_path):
                 self.model = joblib.load(self.ml_path)
             else:
@@ -73,17 +83,22 @@ class StrategyEngine:
             self.model.fit(X, y)
             joblib.dump(self.model, self.ml_path)
 
-        print(f"🔄 [Autonomous Self-Training]: تم تحديث وتدريب العقل ({self.strategy_name}) ذاتياً بنجاح.")
+        print(f"🔄 [Autonomous Self-Training]: تم تحديث وتدريب العقل ({self.strategy_name}) بنجاح.")
 
     def predict(self, features):
         if "Transformer" in self.strategy_name:
-            X = features.reshape((1, 1, len(features)))
+            if len(features.shape) == 1:
+                X = features.reshape((1, 1, len(features)))
+            else:
+                X = features
             prediction = self.model.predict(X, verbose=0)[0][0]
             return (prediction * 2) - 1.0 
         elif "Swarm" in self.strategy_name:
-            pred_rf = self.agent_rf.predict(features.reshape(1, -1))[0]
-            pred_gb = self.agent_gb.predict(features.reshape(1, -1))[0]
+            f = features.reshape(1, -1) if len(features.shape) == 1 else features
+            pred_rf = self.agent_rf.predict(f)[0]
+            pred_gb = self.agent_gb.predict(f)[0]
             return ((1.0 if pred_rf == 1 else -1.0) + (1.0 if pred_gb == 1 else -1.0)) / 2.0
         else:
-            pred = self.model.predict(features.reshape(1, -1))[0]
+            f = features.reshape(1, -1) if len(features.shape) == 1 else features
+            pred = self.model.predict(f)[0]
             return 1.0 if pred == 1 else -1.0

@@ -7,7 +7,8 @@ DEMO = True
 
 # إعدادات السيرفر والسوق
 SERVER = "https://demo-api-capital.backend-capital.com" if DEMO else "https://api-capital.backend-capital.com"
-EPIC = "CS.D.EURUSD.TODAY.IP"
+EPIC = "CS.D.EURUSD.CFD.IP"
+
 
 MAX_DATA_POINTS = 1000
 

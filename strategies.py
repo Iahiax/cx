@@ -3,13 +3,16 @@ import os
 import numpy as np
 import joblib
 
-# إيقاف رسائل تحذير TensorFlow المزعجة في الـ Terminal
+# 🟢 الحل السحري لتصادم الذاكرة: استدعاء PyTorch أولاً قبل TensorFlow
+import torch
+from stable_baselines3 import PPO, A2C
+
+# إيقاف رسائل تحذير TensorFlow المزعجة
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 import tensorflow as tf
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D
 from sklearn.svm import SVC
-from stable_baselines3 import PPO, A2C
 
 class StrategyEngine:
     def __init__(self, strategy_name):
@@ -45,7 +48,6 @@ class StrategyEngine:
         y = df['Target'].values[:-1]
         X = X.reshape((X.shape[0], 1, X.shape[1])) 
         
-        # استخدام صيغة .keras الحديثة
         model_path = "transformer_model.keras"
         if os.path.exists(model_path):
             self.model = tf.keras.models.load_model(model_path)
@@ -66,7 +68,7 @@ class StrategyEngine:
     def train_MultiAgentTrendSwarm(self, env):
         print(f"🐝 تدريب: {self.strategy_name}...")
         self.agents = {}
-        # إضافة device="cpu" لمنع محاولة البحث عن GPU وانهيار السيرفر
+        # استخدام المعالج CPU لمنع البحث عن كرت شاشة
         self.agents['PPO'] = PPO("MlpPolicy", env, verbose=0, device="cpu")
         self.agents['PPO'].learn(total_timesteps=5000)
         

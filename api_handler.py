@@ -12,7 +12,6 @@ def login():
     try:
         r = requests.post(url, headers=headers, data=json.dumps(payload), timeout=10)
         if r.status_code == 200:
-            print("🟢 تم تسجيل الدخول بنجاح على منصة التداول التجريبية (Demo).")
             return r.headers.get("CST"), r.headers.get("X-SECURITY-TOKEN")
         else:
             print(f"❌ خطأ في تسجيل الدخول: {r.text}")
@@ -48,6 +47,15 @@ def execute_order(cst, xst, direction, size=1000, stop_distance=None, profit_dis
     url = f"{SERVER}/api/v1/positions"
     headers = {"X-CAP-API-KEY": API_KEY, "CST": cst, "X-SECURITY-TOKEN": xst, "Content-Type": "application/json"}
     
+    # تصحيح وتقييد المسافات ضمن النطاق الآمن والمقبول لـ Capital.com (أقل من الحد الأقصى المسموح)
+    if stop_distance:
+        stop_distance = min(float(stop_distance), 0.0050) # تقييد وقف الخسارة ليكون آمناً ومقبولاً
+        stop_distance = max(stop_distance, 0.0005)      # ألا يقل عن الحد الأدنى
+        
+    if profit_distance:
+        profit_distance = min(float(profit_distance), 0.0100)
+        profit_distance = max(profit_distance, 0.0010)
+
     payload = {
         "epic": EPIC, 
         "direction": direction, 
@@ -64,7 +72,7 @@ def execute_order(cst, xst, direction, size=1000, stop_distance=None, profit_dis
     try:
         r = requests.post(url, headers=headers, data=json.dumps(payload), timeout=10)
         if r.status_code == 200:
-            print(f"🚀 [DEMO EXECUTION] تنفيذ صفقة {direction} بنجاح برافعة {LEVERAGE}:1 بحجم {size}!")
+            print(f"🚀 [DEMO EXECUTION] تم تنفيذ صفقة {direction} بنجاح تام على حساب الـ Demo!")
             return True
         else:
             print(f"❌ فشل التنفيذ على الديمو: {r.text}")

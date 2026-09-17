@@ -26,7 +26,11 @@ def get_market_data(cst, xst):
     try:
         r = requests.get(url, headers=headers, timeout=15)
         data = r.json()
+        
+        # طباعة الخطأ التفصيلي إذا رفضت المنصة الطلب
         if 'prices' not in data: 
+            print(f"\n❌ المنصة رفضت إرسال البيانات! الرد التفصيلي من السيرفر:")
+            print(data)
             return None
             
         prices = [{'time': p['snapshotTime'], 'open': p['openPrice']['bid'], 
@@ -39,7 +43,7 @@ def get_market_data(cst, xst):
         df.set_index('time', inplace=True)
         return df
     except Exception as e:
-        print(f"⚠️ خطأ في سحب البيانات: {e}")
+        print(f"\n⚠️ خطأ في الاتصال بالمنصة أثناء سحب البيانات: {e}")
         return None
 
 def execute_order(cst, xst, direction, size=1000):

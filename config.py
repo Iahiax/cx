@@ -11,7 +11,7 @@ EPIC = "CS.D.EURUSD.MINI.IP"
 MAX_DATA_POINTS = 2000
 
 # 🔄 تم التعديل هنا: تغيير الفريم الزمني إلى الدقيقة الواحدة
-RESOLUTION = "MINUTE_1" 
+RESOLUTION = "MINUTE" 
 
 # إعدادات النظام
 LOG_FILE = "trading_log.txt"

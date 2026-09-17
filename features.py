@@ -6,9 +6,9 @@ from ta.volatility import AverageTrueRange, BollingerBands
 from ta.volume import ForceIndexIndicator, VolumeWeightedAveragePrice
 
 def add_features(df):
-    """هندسة الخصائص المتقدمة مع مؤشرات السيولة وحجم التداول (VWAP & Force Index)"""
+    """هندسة الخصائص الأسطورية: التقلب الضمني، السرعة، والسيولة العميقة"""
     
-    # مؤشرات الزخم والترند
+    # 1. مؤشرات الزخم والترند الأساسية
     df['RSI_14'] = RSIIndicator(close=df['close'], window=14).rsi()
     
     macd = MACD(close=df['close'], window_slow=26, window_fast=12, window_sign=9)
@@ -22,20 +22,25 @@ def add_features(df):
     df['EMA_21'] = EMAIndicator(close=df['close'], window=21).ema_indicator()
     df['EMA_Cross'] = df['EMA_9'] - df['EMA_21']
     
-    # مؤشرات السيولة الفائقة (Volume Profile & Imbalance)
+    # 2. مؤشرات السيولة وحجم التداول (VWAP & Force Index)
     try:
         vwap = VolumeWeightedAveragePrice(high=df['high'], low=df['low'], close=df['close'], volume=df['volume'], window=14)
         df['VWAP'] = vwap.volume_weighted_average_price()
     except:
-        df['VWAP'] = df['close'] # قيمة بديلة في حال عدم توفر حجم تداول لحظي كافي
+        df['VWAP'] = df['close']
         
     force_index = ForceIndexIndicator(close=df['close'], volume=df['volume'], window=13)
     df['Force_Index'] = force_index.force_index()
+
+    # 3. محرك السرعة اللحظية (Price Velocity لمعيار الضوضاء والأخبار الكاذبة)
+    df['Price_Velocity'] = df['close'].diff().abs()
     
-    # الهدف (Target): الشمعة القادمة صاعدة (1) أم هابطة (0)
+    # 4. سطح التقلب (Volatility Surface Dynamics)
+    df['Volatility_Surface'] = df['ATR_14'].pct_change(3)
+
+    # الهدف (Target)
     df['Target'] = (df['close'].shift(-1) > df['close']).astype(int)
     
-    # تنظيف البيانات
     df.dropna(inplace=True)
     
     # التطبيع الاحترافي (Normalization)

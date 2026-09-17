@@ -24,59 +24,60 @@ from config import LOG_FILE, LEVERAGE
 
 logging.basicConfig(filename=LOG_FILE, level=logging.INFO, format='%(asctime)s - %(message)s')
 
-# تشكيل المجلس الأسطوري المكون من 4 عقول عصبية متقدمة لزوج EUR/USD
 COUNCIL_MEMBERS = {
-    "TransformerForecaster": 0.35,  # التنبؤ العميق
-    "MultiAgentTrendSwarm": 0.30,   # سرب تعلم الآلة
-    "OnlineSVMTrend": 0.15,         # الخبير الإحصائي
-    "VolatilityProphet": 0.20       # نبي التقلبات والسيولة
+    "TransformerForecaster": 0.35,  
+    "MultiAgentTrendSwarm": 0.30,   
+    "OnlineSVMTrend": 0.15,         
+    "VolatilityProphet": 0.20       
 }
 
 def run_ultimate_ai_council():
-    print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 👑 بدء تشغيل الكيان الأسطوري لزوج EUR/USD (Demo - Leverage {LEVERAGE}:1)")
+    print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 👑 [1/6] بدء تشغيل الكيان الأسطوري لزوج EUR/USD (Demo - Leverage {LEVERAGE}:1)")
     
+    # 1. الاتصال
+    print("🔄 جاري الاتصال بمنصة Capital.com...")
     cst, xst = login()
-    if not cst: return
+    if not cst:
+        print("❌ فشل الاتصال بالمنصة.")
+        return
 
-    print("📥 سحب بيانات EUR/USD اللحظية...")
+    # 2. سحب البيانات
+    print("📥 [2/6] جاري سحب الشموع التاريخية واللحظية لـ EUR/USD (1000 شمعة)...")
     raw_df = get_market_data(cst, xst)
-    if raw_df is None: return
+    if raw_df is None or raw_df.empty:
+        print("❌ لم يتم استلام أي بيانات من المنصة.")
+        return
+    print(تم بنجاح سحب {len(raw_df)} شمعة تاريخية.)
 
-    # 1. درع تخدير الأخبار الكاذبة (Noise Spike Shield)
+    # 3. درع الأخبار والفخاخ
+    print("🛡️ [3/6] فحص درع تخدير الأخبار وكشف فخاخ الحيتان...")
     last_velocity = raw_df['close'].diff().abs().iloc[-1]
     current_atr = raw_df['high'].iloc[-1] - raw_df['low'].iloc[-1]
     if current_atr == 0: current_atr = 0.0005
 
     if last_velocity > (current_atr * 3.5):
-        print(f"🚨 [Noise Spike Shield]: رصد حركة سعرية جنونية مفاجئة ({last_velocity:.4f}). تم تفعيل درع التخدير وإلغاء التداول تفادياً للأخبار المزيفة!")
+        print(f"🚨 [Noise Spike Shield]: رصد حركة سعرية جنونية مفاجئة ({last_velocity:.4f}). تم تفعيل درع التخدير وإلغاء التداول!")
         return
 
-    # 2. صيد فخاخ الحيتان (Stop-Hunt / Trap Detector)
-    last_volume = raw_df['volume'].iloc[-1]
-    avg_volume = raw_df['volume'].rolling(20).mean().iloc[-1]
-    is_price_breaking_low = raw_df['close'].iloc[-1] < raw_df['low'].rolling(5).min().iloc[-2]
-    
-    if is_price_breaking_low and last_volume < (avg_volume * 0.7):
-        print("💡 [The Trap Detector]: تم كشف فخ صانع السوق! كسر وهمي للقاع بحجم تداول ضعيف جداً. انعكاس فوري نحو الشراء مع الحيتان!")
-        direction = "BUY"
-        trade_size = 2000
-        stop_dist = current_atr * 1.2
-        profit_dist = current_atr * 2.5
-        if execute_order(cst, xst, direction, trade_size, stop_distance=stop_dist, profit_distance=profit_dist):
-            logging.info("Trap Detector executed BUY trade on EUR/USD.")
-        return
-
+    # 4. هندسة الخصائص
+    print("⚙️ [4/6] تطبيق هندسة الخصائص، مؤشرات السيولة، والتطبيع الاحترافي...")
     df = add_features(raw_df)
     env = ProTradingEnv(df)
-    
+    print("تمت هندسة الخصائص وتجهيز البيئة بنجاح.")
+
+    # 5. تدريب العقول الأربعة مع تتبع التقدم
+    print("⚡ [5/6] بدء تدريب عقول المجلس العصبي الأربعة...")
     engines = {}
-    print("⚡ إيقاظ المجلس العصبي الأسطوري...")
-    for member in COUNCIL_MEMBERS.keys():
+    total_members = len(COUNCIL_MEMBERS)
+    for i, (member, weight) in enumerate(COUNCIL_MEMBERS.items(), 1):
+        print(f"   ⏳ [{i}/{total_members}] جاري تدريب العقل: {member}...")
         engine = StrategyEngine(member)
         engine.train(df=df, env=env)
         engines[member] = engine
-        
-    print("\n⚖️ [جلسة التصويت العصبي - Confidence-Weighted Voting]")
+        print(f"   ✅ تم تدريب واستقرار العقل: {member}")
+
+    # 6. التصويت واتخاذ القرار
+    print("\n⚖️ [6/6] انعقاد جلسة التصويت العصبي وزنه حسب الثقة...")
     latest_features = env.features[-1].astype(np.float32)
     weighted_consensus = 0.0
     

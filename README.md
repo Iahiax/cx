@@ -12,3 +12,6 @@ with open("config.py", "w", encoding="utf-8") as f:
     f.write(cleaned)
 print("✅ تم تنظيف ملف config.py وإزالة أي رموز مخفية بنجاح!")
 '
+
+python3 -c 'import re; f="config.py"; content=open(f, encoding="utf-8", errors="ignore").read(); open(f, "w", encoding="utf-8").write("".join([c for c in content if ord(c)<128])); print("Done!")'
+

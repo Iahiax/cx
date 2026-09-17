@@ -3,16 +3,13 @@ import os
 import numpy as np
 import joblib
 
-# 🟢 الحل السحري لتصادم الذاكرة: استدعاء PyTorch أولاً قبل TensorFlow
-import torch
-from stable_baselines3 import PPO, A2C
-
-# إيقاف رسائل تحذير TensorFlow المزعجة
+# إيقاف رسائل تحذير TensorFlow المزعجة في الـ Terminal
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 import tensorflow as tf
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D
 from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 
 class StrategyEngine:
     def __init__(self, strategy_name):
@@ -20,12 +17,11 @@ class StrategyEngine:
         self.model = None
 
     # ==========================================
-    # 🧠 Transformer Trend Forecaster
+    # 🧠 Transformer Trend Forecaster (التعلم العميق)
     # ==========================================
     def build_transformer_model(self, input_shape):
         inputs = Input(shape=input_shape)
         
-        # تحديد أسماء المدخلات صراحة (query, value) لتفادي خطأ Keras
         attention_output = MultiHeadAttention(num_heads=4, key_dim=64)(query=inputs, value=inputs)
         attention_output = Dropout(0.2)(attention_output)
         out1 = LayerNormalization(epsilon=1e-6)(inputs + attention_output)
@@ -36,7 +32,7 @@ class StrategyEngine:
         out2 = LayerNormalization(epsilon=1e-6)(out1 + ffn_output)
         
         pooling = GlobalAveragePooling1D()(out2)
-        outputs = Dense(1, activation="sigmoid")(pooling) # يخرج بين 0 و 1
+        outputs = Dense(1, activation="sigmoid")(pooling)
         
         model = Model(inputs=inputs, outputs=outputs)
         model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
@@ -60,25 +56,35 @@ class StrategyEngine:
     def predict_TransformerForecaster(self, features):
         X = features.reshape((1, 1, len(features)))
         prediction = self.model.predict(X, verbose=0)[0][0]
-        return (prediction * 2) - 1.0 # تحويل الناتج ليكون بين -1 و 1
+        return (prediction * 2) - 1.0 
 
     # ==========================================
-    # 🤖 Multi-Agent Trend Swarm
+    # 🤖 Multi-Agent Trend Swarm (سرب تعلم الآلة)
     # ==========================================
-    def train_MultiAgentTrendSwarm(self, env):
-        print(f"🐝 تدريب: {self.strategy_name}...")
-        self.agents = {}
-        # استخدام المعالج CPU لمنع البحث عن كرت شاشة
-        self.agents['PPO'] = PPO("MlpPolicy", env, verbose=0, device="cpu")
-        self.agents['PPO'].learn(total_timesteps=5000)
+    def train_MultiAgentTrendSwarm(self, df):
+        print(f"🐝 تدريب: {self.strategy_name} (ML Ensemble)...")
+        # استخدام الخصائص لتدريب السرب بدلاً من بيئة Gym
+        X = df.drop(columns=['open', 'high', 'low', 'close', 'volume', 'Target']).values[:-1]
+        y = df['Target'].values[:-1]
         
-        self.agents['A2C'] = A2C("MlpPolicy", env, verbose=0, device="cpu")
-        self.agents['A2C'].learn(total_timesteps=5000)
+        # إنشاء وكيلين يعتمدان على التصنيف المتقدم
+        self.agent_rf = RandomForestClassifier(n_estimators=100, random_state=42)
+        self.agent_gb = GradientBoostingClassifier(n_estimators=100, random_state=42)
+        
+        self.agent_rf.fit(X, y)
+        self.agent_gb.fit(X, y)
 
     def predict_MultiAgentTrendSwarm(self, features):
-        action_ppo, _ = self.agents['PPO'].predict(features)
-        action_a2c, _ = self.agents['A2C'].predict(features)
-        return (action_ppo[0] + action_a2c[0]) / 2.0
+        f = features.reshape(1, -1)
+        pred_rf = self.agent_rf.predict(f)[0]
+        pred_gb = self.agent_gb.predict(f)[0]
+        
+        # تحويل 0 و 1 إلى -1.0 و 1.0
+        vote_rf = 1.0 if pred_rf == 1 else -1.0
+        vote_gb = 1.0 if pred_gb == 1 else -1.0
+        
+        # متوسط تصويت السرب
+        return (vote_rf + vote_gb) / 2.0
 
     # ==========================================
     # 📈 Online SVM Trend (الخبير الرياضي)
@@ -103,10 +109,8 @@ class StrategyEngine:
         method_name = f"train_{self.strategy_name}"
         if hasattr(self, method_name):
             method = getattr(self, method_name)
-            if "Swarm" in self.strategy_name or "RL" in self.strategy_name:
-                method(env)
-            else:
-                method(df)
+            # الآن جميع الاستراتيجيات تعتمد مباشرة على البيانات df لضمان الاستقرار
+            method(df)
         else:
             print(f"⚠️ دالة {method_name} مفقودة.")
 

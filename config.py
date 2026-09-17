@@ -17,3 +17,5 @@ RESOLUTION = "MINUTE"
 
 # إعدادات النظام
 LOG_FILE = "trading_log.txt"
+
+LEVERAGE = 100

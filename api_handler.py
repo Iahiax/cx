@@ -27,10 +27,8 @@ def get_market_data(cst, xst):
         r = requests.get(url, headers=headers, timeout=15)
         data = r.json()
         
-        # طباعة الخطأ التفصيلي إذا رفضت المنصة الطلب
         if 'prices' not in data: 
-            print(f"\n❌ المنصة رفضت إرسال البيانات! الرد التفصيلي من السيرفر:")
-            print(data)
+            print(f"\n❌ المنصة رفضت إرسال البيانات! الرد التفصيلي: {data}")
             return None
             
         prices = [{'time': p['snapshotTime'], 'open': p['openPrice']['bid'], 
@@ -46,14 +44,27 @@ def get_market_data(cst, xst):
         print(f"\n⚠️ خطأ في الاتصال بالمنصة أثناء سحب البيانات: {e}")
         return None
 
-def execute_order(cst, xst, direction, size=1000):
+def execute_order(cst, xst, direction, size=1000, stop_distance=None, profit_distance=None):
     url = f"{SERVER}/api/v1/positions"
     headers = {"X-CAP-API-KEY": API_KEY, "CST": cst, "X-SECURITY-TOKEN": xst, "Content-Type": "application/json"}
-    payload = {"epic": EPIC, "direction": direction, "size": size}
+    
+    payload = {
+        "epic": EPIC, 
+        "direction": direction, 
+        "size": size,
+        "guaranteedStop": False
+    }
+    
+    # إضافة وقف الخسارة وجني الأرباح إذا توفرت المسافات محسوبة بالنقاط
+    if stop_distance:
+        payload["stopDistance"] = round(stop_distance, 4)
+    if profit_distance:
+        payload["profitDistance"] = round(profit_distance, 4)
     
     try:
         r = requests.post(url, headers=headers, data=json.dumps(payload), timeout=10)
         if r.status_code == 200:
+            print("🛡️ تم تنفيذ الصفقة مع ربط إعدادات الحماية ومخاطر الـ ATR بنجاح.")
             return True
         else:
             print(f"❌ فشل التنفيذ: {r.text}")

@@ -12,6 +12,7 @@ def login():
     try:
         r = requests.post(url, headers=headers, data=json.dumps(payload), timeout=10)
         if r.status_code == 200:
+            print("🟢 تم تسجيل الدخول بنجاح على منصة التداول التجريبية (Demo).")
             return r.headers.get("CST"), r.headers.get("X-SECURITY-TOKEN")
         else:
             print(f"❌ خطأ في تسجيل الدخول: {r.text}")
@@ -41,21 +42,22 @@ def get_market_data(cst, xst):
         df.set_index('time', inplace=True)
         return df
     except Exception as e:
-        print(f"\n⚠️ خطأ في الاتصال بالمنصة أثناء سحب البيانات: {e}")
+        print(f"⚠️ خطأ في الاتصال بالمنصة أثناء سحب البيانات: {e}")
         return None
 
 def execute_order(cst, xst, direction, size=1000, stop_distance=None, profit_distance=None):
     url = f"{SERVER}/api/v1/positions"
     headers = {"X-CAP-API-KEY": API_KEY, "CST": cst, "X-SECURITY-TOKEN": xst, "Content-Type": "application/json"}
     
+    # تمرير إعدادات الرافعة المالية 100:1 وعقود الـ CFD
     payload = {
         "epic": EPIC, 
         "direction": direction, 
         "size": size,
-        "guaranteedStop": False
+        "guaranteedStop": False,
+        "leverage": LEVERAGE
     }
     
-    # إضافة وقف الخسارة وجني الأرباح إذا توفرت المسافات محسوبة بالنقاط
     if stop_distance:
         payload["stopDistance"] = round(stop_distance, 4)
     if profit_distance:
@@ -64,11 +66,11 @@ def execute_order(cst, xst, direction, size=1000, stop_distance=None, profit_dis
     try:
         r = requests.post(url, headers=headers, data=json.dumps(payload), timeout=10)
         if r.status_code == 200:
-            print("🛡️ تم تنفيذ الصفقة مع ربط إعدادات الحماية ومخاطر الـ ATR بنجاح.")
+            print(f"🚀 [DEMO EXECUTION] تم فتح صفقة {direction} بنجاح برافعة مالية {LEVERAGE}:1 وحجم {size}!")
             return True
         else:
-            print(f"❌ فشل التنفيذ: {r.text}")
+            print(f"❌ فشل التنفيذ على الديمو: {r.text}")
             return False
     except Exception as e:
-        print(f"⚠️ خطأ في إرسال الأمر: {e}")
+        print(f"⚠️ خطأ في إرسال الأمر للمنصة: {e}")
         return False

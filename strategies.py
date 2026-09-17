@@ -22,7 +22,7 @@ class StrategyEngine:
     def build_transformer_model(self, input_shape):
         inputs = Input(shape=input_shape)
         
-        # 🟢 التعديل الجوهري هنا: تحديد أسماء المدخلات صراحة (query, value) لتفادي خطأ Keras
+        # تحديد أسماء المدخلات صراحة (query, value) لتفادي خطأ Keras
         attention_output = MultiHeadAttention(num_heads=4, key_dim=64)(query=inputs, value=inputs)
         attention_output = Dropout(0.2)(attention_output)
         out1 = LayerNormalization(epsilon=1e-6)(inputs + attention_output)
@@ -45,7 +45,7 @@ class StrategyEngine:
         y = df['Target'].values[:-1]
         X = X.reshape((X.shape[0], 1, X.shape[1])) 
         
-        # 🟢 التعديل الثاني: استخدام صيغة .keras الحديثة بدلاً من .h5 القديمة
+        # استخدام صيغة .keras الحديثة
         model_path = "transformer_model.keras"
         if os.path.exists(model_path):
             self.model = tf.keras.models.load_model(model_path)
@@ -66,10 +66,11 @@ class StrategyEngine:
     def train_MultiAgentTrendSwarm(self, env):
         print(f"🐝 تدريب: {self.strategy_name}...")
         self.agents = {}
-        self.agents['PPO'] = PPO("MlpPolicy", env, verbose=0)
+        # إضافة device="cpu" لمنع محاولة البحث عن GPU وانهيار السيرفر
+        self.agents['PPO'] = PPO("MlpPolicy", env, verbose=0, device="cpu")
         self.agents['PPO'].learn(total_timesteps=5000)
         
-        self.agents['A2C'] = A2C("MlpPolicy", env, verbose=0)
+        self.agents['A2C'] = A2C("MlpPolicy", env, verbose=0, device="cpu")
         self.agents['A2C'].learn(total_timesteps=5000)
 
     def predict_MultiAgentTrendSwarm(self, features):
